@@ -1,52 +1,50 @@
 import streamlit as st
-from streamlit_webrtc import webrtc_streamer, WebRtcMode, RTCConfiguration
+from streamlit_webrtc import webrtc_streamer, RTCConfiguration
 import os
 
-# Sayfa Ayarları
+# Sayfa Genişliği
 st.set_page_config(page_title="Bizim Discord", layout="wide")
 
-# Kararlı STUN Sunucuları
-RTC_CONFIGURATION = RTCConfiguration(
+# Kararlı Sunucu Ayarları
+RTC_CONFIG = RTCConfiguration(
     {"iceServers": [{"urls": ["stun:stun.l.google.com:19302"]}]}
 )
 
-# --- MESAJ SİSTEMİ ---
-DB_FILE = "chat_log.txt"
+# --- MESAJLAŞMA SİSTEMİ ---
+DB_FILE = "chat.txt"
 
-def save_message(user, text):
+def save_msg(u, t):
     with open(DB_FILE, "a", encoding="utf-8") as f:
-        f.write(f"{user}: {text}\n")
+        f.write(f"{u}: {t}\n")
 
-def load_messages():
-    if not os.path.exists(DB_FILE):
-        return []
+def get_msgs():
+    if not os.path.exists(DB_FILE): return []
     with open(DB_FILE, "r", encoding="utf-8") as f:
-        return f.readlines()[-20:] # Sadece son 20 mesajı göster (hız için)
+        return f.readlines()[-15:]
 
 # --- ARAYÜZ ---
-st.title("🎙️ Ortak Sesli Sohbet")
+st.title("🎙️ Ortak Sohbet Odası")
 
-col1, col2 = st.columns([1, 1])
+c1, c2 = st.columns([1, 1])
 
-with col1:
+with c1:
     st.subheader("Sesli Kanal")
-    # Hatalı parametreler temizlendi
+    # Hataya sebep olan 'mode' ve 'constraints' parametrelerini en sade haline getirdik
     webrtc_streamer(
-        key="voice-chat",
-        mode=WebRtcMode.SENDRECV,
-        rtc_configuration=RTC_CONFIGURATION,
-        media_stream_constraints={"video": False, "audio": True},
+        key="voice",
+        rtc_configuration=RTC_CONFIG,
+        video_html_attrs={"style": {"display": "none"}}, # Görüntüyü gizle
     )
+    st.caption("START butonuna basın ve mikrofon izni verin.")
 
-with col2:
-    st.subheader("Yazılı Sohbet")
-    username = st.text_input("Adın:", value="User", key="chat_user")
+with c2:
+    st.subheader("Yazışma")
+    name = st.text_input("Adın:", "User")
     
-    # Mesajları oku
-    messages = load_messages()
-    for m in messages:
-        st.write(m.strip())
+    # Mesajları göster
+    for m in get_msgs():
+        st.text(m.strip())
 
-    if prompt := st.chat_input("Mesaj yaz..."):
-        save_message(username, prompt)
+    if txt := st.chat_input("Mesaj yaz..."):
+        save_msg(name, txt)
         st.rerun()
